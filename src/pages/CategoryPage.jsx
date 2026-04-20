@@ -1,83 +1,103 @@
 import { Link, useParams } from "react-router-dom";
-import ProductCard from "../components/ProductCard";
-import {
-  categories,
-  getCategoryMeta,
-  getProductsByCategory
-} from "../data/mockData";
+import EmptyState from "../components/EmptyState";
+import ProductGrid from "../components/ProductGrid";
+import SectionBlock from "../components/SectionBlock";
+import { categories, getCategoryBySlug, getProductsByCategory } from "../data/mockData";
 import { useShop } from "../context/ShopContext";
 
 function matchesSearch(product, searchQuery) {
-  const keyword = searchQuery.trim().toLowerCase();
-  if (!keyword) return true;
-  return [product.name, product.brand, ...(product.tags || [])]
+  if (!product) {
+    return false;
+  }
+
+  var keyword = (searchQuery || "").trim().toLowerCase();
+
+  if (!keyword) {
+    return true;
+  }
+
+  var source = [
+    product.name || "",
+    product.brand || "",
+    Array.isArray(product.tags) ? product.tags.join(" ") : ""
+  ]
     .join(" ")
-    .toLowerCase()
-    .includes(keyword);
+    .toLowerCase();
+
+  return source.indexOf(keyword) > -1;
 }
 
 export default function CategoryPage() {
-  const { slug } = useParams();
-  const { searchQuery } = useShop();
-  const currentCategory = getCategoryMeta(slug);
-  const products = getProductsByCategory(slug).filter((product) =>
-    matchesSearch(product, searchQuery)
-  );
+  var params = useParams();
+  var shop = useShop();
+  var currentCategory = getCategoryBySlug(params.slug);
+  var categoryProducts = currentCategory ? getProductsByCategory(currentCategory.slug) : [];
+  var filteredProducts = categoryProducts.filter(function (item) {
+    return matchesSearch(item, shop.searchQuery);
+  });
 
   return (
-    <div className="container-wide pt-8">
-      <section className="glass-panel overflow-hidden">
-        <div className="bg-gradient-to-r from-ink-900 via-slate-800 to-slate-700 px-10 py-10 text-white">
-          <div className="text-sm text-white/70">分类频道</div>
-          <h1 className="mt-3 text-4xl font-black">{currentCategory.title}</h1>
-          <p className="mt-3 max-w-3xl text-base text-white/80">{currentCategory.subtitle}</p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            {categories.map((item) => (
-              <Link
-                key={item.slug}
-                to={`/category/${item.slug}`}
-                className={`rounded-full px-5 py-3 text-sm font-semibold transition ${
-                  item.slug === slug
-                    ? "bg-white text-ink-900"
-                    : "bg-white/10 text-white hover:bg-white/20"
-                }`}
-              >
-                {item.title}
-              </Link>
-            ))}
-          </div>
+    <div className="page-shell py-4 sm:py-6">
+      <section className="surface-card p-4 sm:p-6">
+        <div className="text-xs text-slate-500">分类频道</div>
+        <h1 className="mt-2 text-2xl font-bold text-slate-900">
+          {currentCategory ? currentCategory.title : "分类商品"}
+        </h1>
+        <p className="mt-2 text-sm leading-6 text-slate-500">
+          {currentCategory ? currentCategory.description : "浏览精选分类商品"}
+        </p>
+        <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+          {Array.isArray(categories)
+            ? categories.map(function (item) {
+                return (
+                  <Link
+                    key={item.slug}
+                    to={"/category/" + item.slug}
+                    className={
+                      "whitespace-nowrap rounded-full px-4 py-2 text-sm " +
+                      (currentCategory && currentCategory.slug === item.slug
+                        ? "bg-orange-500 text-white"
+                        : "bg-slate-100 text-slate-700")
+                    }
+                  >
+                    {item.title}
+                  </Link>
+                );
+              })
+            : null}
         </div>
       </section>
 
-      <section className="mt-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-2xl font-black text-ink-900">{currentCategory.title}商品</div>
-            <div className="mt-2 text-sm text-slate-500">
-              {searchQuery
-                ? `当前关键词“${searchQuery}”下共 ${products.length} 件商品`
-                : `共为你精选 ${products.length} 件高热度商品`}
-            </div>
-          </div>
-          <Link
-            to="/"
-            className="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-ink-900 shadow-card"
-          >
-            返回首页
-          </Link>
-        </div>
+      <section className="mt-6">
+        <SectionBlock
+          title={currentCategory ? currentCategory.title + "商品" : "分类商品"}
+          description={
+            shop.searchQuery
+              ? "当前关键词“" + shop.searchQuery + "”下共 " + filteredProducts.length + " 件商品"
+              : "共 " + filteredProducts.length + " 件商品"
+          }
+          to="/"
+          rightLabel="返回首页"
+        />
 
-        {products.length ? (
-          <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+        {filteredProducts.length > 0 ? (
+          <ProductGrid products={filteredProducts} />
         ) : (
-          <div className="mt-6 rounded-[28px] bg-white px-8 py-16 text-center shadow-card">
-            <div className="text-2xl font-bold text-ink-900">这个分类下没有匹配结果</div>
-            <div className="mt-3 text-slate-500">可以清空搜索词，或者切换到其他分类继续浏览。</div>
-          </div>
+          <EmptyState
+            title="当前分类暂无匹配结果"
+            description="可以清空搜索词，或切换到其他分类继续浏览。"
+            action={
+              <button
+                type="button"
+                onClick={function () {
+                  shop.setSearchQuery("");
+                }}
+                className="min-h-11 rounded-xl bg-orange-500 px-4 text-sm font-semibold text-white"
+              >
+                清空搜索
+              </button>
+            }
+          />
         )}
       </section>
     </div>

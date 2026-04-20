@@ -2,7 +2,15 @@ export function SearchIcon(props) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
       <circle cx="11" cy="11" r="7" />
-      <path d="M20 20L16.65 16.65" strokeLinecap="round" />
+      <path d="M20 20L16.8 16.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function MenuIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+      <path d="M4 7H20M4 12H20M4 17H20" strokeLinecap="round" />
     </svg>
   );
 }
@@ -10,9 +18,18 @@ export function SearchIcon(props) {
 export function CartIcon(props) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
-      <path d="M3 4H5L7.4 15.2A1 1 0 0 0 8.4 16H18.4A1 1 0 0 0 19.4 15.2L21 7H6" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="9" cy="20" r="1.25" />
-      <circle cx="18" cy="20" r="1.25" />
+      <path d="M3.5 4.5H5.5L7.4 14.2C7.5 14.8 8 15.2 8.6 15.2H17.6C18.2 15.2 18.7 14.8 18.8 14.2L20.2 7.6H6.4" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="9.2" cy="19" r="1.1" />
+      <circle cx="17.2" cy="19" r="1.1" />
+    </svg>
+  );
+}
+
+export function HomeIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+      <path d="M4 10.5L12 4L20 10.5V19A1 1 0 0 1 19 20H5A1 1 0 0 1 4 19V10.5Z" strokeLinejoin="round" />
+      <path d="M9.5 20V13H14.5V20" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -20,8 +37,8 @@ export function CartIcon(props) {
 export function UserIcon(props) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
-      <circle cx="12" cy="8" r="4" />
-      <path d="M5 20C5.8 16.8 8.4 15 12 15C15.6 15 18.2 16.8 19 20" strokeLinecap="round" />
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M5 19C6.2 16.3 8.5 15 12 15C15.5 15 17.8 16.3 19 19" strokeLinecap="round" />
     </svg>
   );
 }
@@ -30,24 +47,7 @@ export function OrderIcon(props) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
       <rect x="5" y="4" width="14" height="16" rx="2" />
-      <path d="M9 9H15M9 13H15M9 17H13" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-export function ArrowRightIcon(props) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
-      <path d="M5 12H19" strokeLinecap="round" />
-      <path d="M12 5L19 12L12 19" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-export function StarIcon(props) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
-      <path d="M12 3.5L14.95 9.48L21.55 10.44L16.78 15.08L17.9 21.65L12 18.54L6.1 21.65L7.22 15.08L2.45 10.44L9.05 9.48L12 3.5Z" />
+      <path d="M8.5 9H15.5M8.5 13H15.5M8.5 17H13.5" strokeLinecap="round" />
     </svg>
   );
 }

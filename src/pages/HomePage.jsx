@@ -1,115 +1,160 @@
 import { Link } from "react-router-dom";
-import BannerCarousel from "../components/BannerCarousel";
-import CategoryMenu from "../components/CategoryMenu";
-import InfoPanel from "../components/InfoPanel";
-import ProductCard from "../components/ProductCard";
-import SectionHeader from "../components/SectionHeader";
+import BannerCard from "../components/BannerCard";
+import CategoryTabs from "../components/CategoryTabs";
+import EmptyState from "../components/EmptyState";
+import FeaturePanel from "../components/FeaturePanel";
+import ProductGrid from "../components/ProductGrid";
+import SectionBlock from "../components/SectionBlock";
 import {
   banners,
   categories,
+  featureLinks,
   getProductsByCategory,
-  getSectionMeta,
-  products,
-  sectionOrder
+  getRecommendedProducts,
+  products
 } from "../data/mockData";
 import { useShop } from "../context/ShopContext";
 
 function matchesSearch(product, searchQuery) {
-  const keyword = searchQuery.trim().toLowerCase();
-  if (!keyword) return true;
-  return [product.name, product.brand, ...(product.tags || [])]
+  if (!product) {
+    return false;
+  }
+
+  var keyword = (searchQuery || "").trim().toLowerCase();
+
+  if (!keyword) {
+    return true;
+  }
+
+  var searchSource = [
+    product.name || "",
+    product.brand || "",
+    Array.isArray(product.tags) ? product.tags.join(" ") : ""
+  ]
     .join(" ")
-    .toLowerCase()
-    .includes(keyword);
+    .toLowerCase();
+
+  return searchSource.indexOf(keyword) > -1;
 }
 
 export default function HomePage() {
-  const { searchQuery } = useShop();
-  const searchResults = products.filter((product) => matchesSearch(product, searchQuery));
+  var shop = useShop();
+  var mainBanner = Array.isArray(banners) && banners[0] ? banners[0] : null;
+  var recommendedProducts = getRecommendedProducts(6);
+  var hotProducts = getProductsByCategory("digital").slice(0, 4).concat(getProductsByCategory("fashion").slice(0, 2));
+  var searchResults = Array.isArray(products)
+    ? products.filter(function (item) {
+        return matchesSearch(item, shop.searchQuery);
+      })
+    : [];
 
   return (
-    <div className="container-wide pt-8">
-      <section className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)_320px]">
-        <CategoryMenu categories={categories} />
-        <BannerCarousel banners={banners} />
-        <InfoPanel />
-      </section>
+    <div className="page-shell py-4 sm:py-6">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <BannerCard
+          title={mainBanner ? mainBanner.title : "星购商城"}
+          subtitle={
+            mainBanner
+              ? mainBanner.subtitle
+              : "首页、分类、详情页和购物车都已调整为移动端稳定优先。"
+          }
+          ctaLabel={mainBanner ? mainBanner.ctaLabel : "开始逛"}
+          to={mainBanner ? "/category/" + mainBanner.targetSlug : "/category/today-picks"}
+        />
+        <FeaturePanel items={featureLinks} />
+      </div>
 
-      <section className="mt-8 rounded-[32px] border border-white/70 bg-white/85 p-6 shadow-soft">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-2xl font-black text-ink-900">热门频道</div>
-            <div className="mt-2 text-sm text-slate-500">用接近真实商城首页的频道化方式快速逛全站</div>
-          </div>
-          <Link to="/category/today-picks" className="rounded-full bg-brand-50 px-5 py-3 text-sm font-semibold text-brand-700">
-            今日精选会场
-          </Link>
-        </div>
-        <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
-          {categories.map((item, index) => (
-            <Link
-              key={item.slug}
-              to={`/category/${item.slug}`}
-              className="rounded-[24px] border border-slate-100 bg-gradient-to-br from-white to-slate-50 px-4 py-5 text-center shadow-card transition hover:-translate-y-1"
-            >
-              <div className="text-sm text-brand-500">0{index + 1}</div>
-              <div className="mt-2 text-base font-semibold text-ink-900">{item.title}</div>
-            </Link>
-          ))}
-        </div>
-      </section>
+      <div className="mt-4">
+        <CategoryTabs categories={categories} />
+      </div>
 
-      {searchQuery ? (
-        <section className="mt-10">
-          <SectionHeader
-            title={`搜索结果：${searchQuery}`}
-            subtitle={`共找到 ${searchResults.length} 件相关商品`}
+      {shop.searchQuery ? (
+        <section className="mt-6">
+          <SectionBlock
+            title={"搜索结果：" + shop.searchQuery}
+            description={"共找到 " + searchResults.length + " 件相关商品"}
             to="/category/today-picks"
-            accent="from-brand-500 via-orange-400 to-amber-300"
+            rightLabel="返回推荐"
           />
-          {searchResults.length ? (
-            <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-              {searchResults.slice(0, 8).map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
+          {searchResults.length > 0 ? (
+            <ProductGrid products={searchResults.slice(0, 8)} />
           ) : (
-              <div className="mt-6 rounded-[28px] bg-white px-8 py-16 text-center shadow-card">
-                <div className="text-2xl font-bold text-ink-900">暂未找到相关商品</div>
-                <div className="mt-3 text-slate-500">可以尝试更换关键词，或从下方频道继续浏览。</div>
-              </div>
+            <EmptyState
+              title="没有找到相关商品"
+              description="可以尝试更换关键词，或者直接浏览下方推荐商品。"
+              action={
+                <button
+                  type="button"
+                  onClick={function () {
+                    shop.setSearchQuery("");
+                  }}
+                  className="min-h-11 rounded-xl bg-orange-500 px-4 text-sm font-semibold text-white"
+                >
+                  清空搜索
+                </button>
+              }
+            />
           )}
         </section>
       ) : null}
 
-      <div className="mt-10 space-y-10">
-        {sectionOrder.map((slug) => {
-          const meta = getSectionMeta(slug);
-          const list = getProductsByCategory(slug).filter((product) =>
-            matchesSearch(product, searchQuery)
-          );
+      <section className="mt-6">
+        <SectionBlock
+          title="推荐商品"
+          description="首页优先展示适合手机浏览的精选卡片列表。"
+          to="/category/today-picks"
+        />
+        <ProductGrid products={recommendedProducts} />
+      </section>
 
-          if (!list.length && searchQuery) {
-            return null;
-          }
+      <section className="mt-6">
+        <SectionBlock
+          title="热门商品"
+          description="精选数码与穿搭热卖，保留电商首页频道感。"
+          to="/category/digital"
+        />
+        <ProductGrid products={hotProducts} />
+      </section>
 
-          return (
-            <section key={slug}>
-              <SectionHeader
-                title={meta.title}
-                subtitle={meta.subtitle}
-                to={`/category/${slug}`}
-                accent={meta.accent}
-              />
-              <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-                {list.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-            </section>
-          );
-        })}
-      </div>
+      <section className="mt-6">
+        <div className="surface-card p-4">
+          <SectionBlock
+            title="频道直达"
+            description="保留电商首页分区结构，但交互尽量简化，优先保证真机稳定。"
+            to="/category/flash-sale"
+            rightLabel="查看全部"
+          />
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.isArray(categories)
+              ? categories.map(function (item) {
+                  var previewProducts = getProductsByCategory(item.slug).slice(0, 2);
+                  return (
+                    <Link
+                      key={item.slug}
+                      to={"/category/" + item.slug}
+                      className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                    >
+                      <div className="text-base font-semibold text-slate-900">{item.title}</div>
+                      <div className="mt-1 text-sm text-slate-500">{item.description}</div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {previewProducts.map(function (product) {
+                          return (
+                            <span
+                              key={product.id}
+                              className="rounded-full bg-white px-3 py-1 text-xs text-slate-600"
+                            >
+                              {product.name}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </Link>
+                  );
+                })
+              : null}
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

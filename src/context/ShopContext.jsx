@@ -1,83 +1,170 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { readStorage, writeStorage } from "../utils/storage";
 
-const ShopContext = createContext(null);
+var ShopContext = createContext(null);
 
-export function ShopProvider({ children }) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [cartItems, setCartItems] = useState(() => {
-    const stored = localStorage.getItem("market-cart");
-    return stored ? JSON.parse(stored) : [];
-  });
+function normalizeCartItem(product, quantity) {
+  if (!product || !product.id) {
+    return null;
+  }
 
-  useEffect(() => {
-    localStorage.setItem("market-cart", JSON.stringify(cartItems));
+  return {
+    id: product.id,
+    name: product.name || "未命名商品",
+    category: product.category || "",
+    brand: product.brand || "",
+    price: typeof product.price === "number" ? product.price : 0,
+    originalPrice:
+      typeof product.originalPrice === "number" ? product.originalPrice : product.price || 0,
+    summary: product.summary || "",
+    imageTone: product.imageTone || "orange",
+    coverLabel: product.coverLabel || "",
+    quantity: quantity > 0 ? quantity : 1
+  };
+}
+
+export function ShopProvider(props) {
+  var children = props.children;
+  var [searchQuery, setSearchQuery] = useState("");
+  var [cartItems, setCartItems] = useState([]);
+  var [isReady, setIsReady] = useState(false);
+
+  useEffect(function () {
+    try {
+      var storedItems = readStorage("market-cart", []);
+      setCartItems(Array.isArray(storedItems) ? storedItems : []);
+    } catch (error) {
+      setCartItems([]);
+    } finally {
+      setIsReady(true);
+    }
+  }, []);
+
+  useEffect(
+    function () {
+      if (!isReady) {
+        return;
+      }
+
+      try {
+        writeStorage("market-cart", cartItems);
+      } catch (error) {
+        return;
+      }
+    },
+    [cartItems, isReady]
+  );
+
+  function addToCart(product, quantity) {
+    var safeQuantity = typeof quantity === "number" && quantity > 0 ? quantity : 1;
+    var safeProduct = normalizeCartItem(product, safeQuantity);
+
+    if (!safeProduct) {
+      return;
+    }
+
+    setCartItems(function (currentItems) {
+      var list = Array.isArray(currentItems) ? currentItems : [];
+      var existing = list.find(function (item) {
+        return item && item.id === safeProduct.id;
+      });
+
+      if (!existing) {
+        return list.concat([safeProduct]);
+      }
+
+      return list.map(function (item) {
+        if (!item || item.id !== safeProduct.id) {
+          return item;
+        }
+
+        return {
+          ...item,
+          quantity: (item.quantity || 1) + safeQuantity
+        };
+      });
+    });
+  }
+
+  function updateQuantity(productId, nextQuantity) {
+    setCartItems(function (currentItems) {
+      var list = Array.isArray(currentItems) ? currentItems : [];
+      return list.map(function (item) {
+        if (!item || item.id !== productId) {
+          return item;
+        }
+
+        return {
+          ...item,
+          quantity: nextQuantity > 1 ? nextQuantity : 1
+        };
+      });
+    });
+  }
+
+  function removeFromCart(productId) {
+    setCartItems(function (currentItems) {
+      var list = Array.isArray(currentItems) ? currentItems : [];
+      return list.filter(function (item) {
+        return item && item.id !== productId;
+      });
+    });
+  }
+
+  function clearCart() {
+    setCartItems([]);
+  }
+
+  var cartCount = useMemo(function () {
+    return cartItems.reduce(function (total, item) {
+      return total + (item && item.quantity ? item.quantity : 0);
+    }, 0);
   }, [cartItems]);
 
-  const addToCart = (product, quantity = 1) => {
-    setCartItems((current) => {
-      const existing = current.find((item) => item.id === product.id);
-      if (existing) {
-        return current.map((item) =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
-        );
-      }
-      return [...current, { ...product, quantity }];
-    });
-  };
+  var cartTotal = useMemo(function () {
+    return cartItems.reduce(function (total, item) {
+      var quantity = item && item.quantity ? item.quantity : 0;
+      var price = item && typeof item.price === "number" ? item.price : 0;
+      return total + quantity * price;
+    }, 0);
+  }, [cartItems]);
 
-  const updateQuantity = (productId, quantity) => {
-    setCartItems((current) =>
-      current
-        .map((item) =>
-          item.id === productId ? { ...item, quantity: Math.max(1, quantity) } : item
-        )
-        .filter(Boolean)
-    );
-  };
-
-  const removeFromCart = (productId) => {
-    setCartItems((current) => current.filter((item) => item.id !== productId));
-  };
-
-  const clearCart = () => {
-    setCartItems([]);
-  };
-
-  const cartCount = useMemo(
-    () => cartItems.reduce((total, item) => total + item.quantity, 0),
-    [cartItems]
+  var contextValue = useMemo(
+    function () {
+      return {
+        searchQuery: searchQuery,
+        setSearchQuery: setSearchQuery,
+        cartItems: cartItems,
+        cartCount: cartCount,
+        cartTotal: cartTotal,
+        addToCart: addToCart,
+        updateQuantity: updateQuantity,
+        removeFromCart: removeFromCart,
+        clearCart: clearCart
+      };
+    },
+    [searchQuery, cartItems, cartCount, cartTotal]
   );
 
-  const cartTotal = useMemo(
-    () => cartItems.reduce((total, item) => total + item.price * item.quantity, 0),
-    [cartItems]
-  );
-
-  return (
-    <ShopContext.Provider
-      value={{
-        searchQuery,
-        setSearchQuery,
-        cartItems,
-        cartCount,
-        cartTotal,
-        addToCart,
-        updateQuantity,
-        removeFromCart,
-        clearCart
-      }}
-    >
-      {children}
-    </ShopContext.Provider>
-  );
+  return <ShopContext.Provider value={contextValue}>{children}</ShopContext.Provider>;
 }
 
 export function useShop() {
-  const context = useContext(ShopContext);
+  var context = useContext(ShopContext);
+
   if (!context) {
-    throw new Error("useShop must be used inside ShopProvider");
+    return {
+      searchQuery: "",
+      setSearchQuery: function () {},
+      cartItems: [],
+      cartCount: 0,
+      cartTotal: 0,
+      addToCart: function () {},
+      updateQuantity: function () {},
+      removeFromCart: function () {},
+      clearCart: function () {}
+    };
   }
+
   return context;
 }
